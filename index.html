@@ -11,45 +11,77 @@
     </div>
     <script>
       // Define your routes
+// Define your routes
 const routes = {
-  '/': '<h1>Home</h1>',
-  '/about': '<h1>About</h1>',
-  '/contact': '<h1>Contact</h1>',
-  '/404': '<h1>404 - Not Found</h1>'
+    '/': '<h1>Home</h1>',
+    '/about': '<h1>About</h1>',
+    '/about/:slug': '<h1>About: {slug}</h1>',
+    '/contact': '<h1>Contact</h1>',
+    '/404': '<h1>404 - Not Found</h1>'
 };
 
 // Get the div container for the content
 const appContainer = document.getElementById('app');
 
 // Render the content based on the current route
-function render(route) {
-  appContainer.innerHTML = routes[route] || routes['/404'];
+function render(route, params) {
+    let content = routes[route] || routes['/404'];
+    if (params) {
+        for (const key in params) {
+            content = content.replace(`{${key}}`, params[key]);
+        }
+        console.log(params); 
+    }
+    appContainer.innerHTML = content;
 }
 
 // Update the browser history and render the new content
 function navigate(path) {
-  history.pushState(null, null, path);
-  render(path);
+    const route = matchRoute(path);
+    history.pushState(null, null, path);
+    render(route.path, route.params);
+}
+
+function matchRoute(path) {
+    for (const route in routes) {
+        const paramNames = [];
+        const regex = new RegExp('^' + route.replace(/:\w+/g, match => {
+            paramNames.push(match.substring(1));
+            return '([^/]+)';
+        }) + '$');
+
+        const match = path.match(regex);
+
+        if (match) {
+            const params = {};
+            for (let i = 0; i < paramNames.length; i++) {
+                params[paramNames[i]] = match[i + 1];
+            }
+            return { path: route, params: params };
+        }
+    }
+    return { path: '/404', params: null };
 }
 
 // Set up the initial route and content
-render(window.location.pathname);
+const initialRoute = matchRoute(window.location.pathname);
+render(initialRoute.path, initialRoute.params);
 
 // Add a popstate event listener to handle the back button
 window.addEventListener('popstate', () => {
-  render(window.location.pathname);
+    const route = matchRoute(window.location.pathname);
+    render(route.path, route.params);
 });
 
 // Add event listeners for your navigation links (if any)
-// For example, you can use an anchor tag with a custom data attribute:
-// <a href="#" data-path="/about">About</a>
-
 document.querySelectorAll('[data-path]').forEach(link => {
-  link.addEventListener('click', e => {
-      e.preventDefault();
-      navigate(link.getAttribute('data-path'));
-  });
+    link.addEventListener('click', e => {
+        e.preventDefault();
+        navigate(link.getAttribute('data-path'));
+    });
 });
+
+
 
     </script>
 </body>
